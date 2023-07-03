@@ -14,8 +14,11 @@ exports.postThread = async (req, res, next) => {
       delete_password: req.body.delete_password,
       replies: []
     });
-
-    return res.redirect("/b/" + board);
+    newThread.save()
+              .then(d => {
+                return res.redirect("/b/" + board);
+              })
+   
   } catch (err) {
     return res.json("error");
   }
@@ -24,6 +27,7 @@ exports.postThread = async (req, res, next) => {
 exports.getThread = async (req, res) => {
   try {
     let board = req.params.board;
+    let response;
     await Message.find({ board: board })
       .sort({ bumped_on: "desc" })
       .limit(10)
@@ -40,12 +44,32 @@ exports.getThread = async (req, res) => {
             //limit replies to 3
             ele.replies = ele.replies.slice(0, 3);
 
-            /*ele.replies.forEach(reply => {
+            ele.replies.forEach(reply => {
               reply.delete_password = undefined;
               reply.reported = undefined;
-            });*/
+            });
+        
           });
-          return res.json(threadArray);
+          
+          //console.log(threadArray)
+          /*
+          const response = [{
+            _id: threadArray[0]._id,
+            text: threadArray[0].text,
+            created_on: threadArray[0].created_on,
+            bumped_on: threadArray[0].bumped_on,
+            replies: threadArray[0].replies,
+            //replycount: threadArray[0].replycount
+          }]
+          //console.log(response)
+          return res.json(response);
+          */
+          const modifiedArray = threadArray.map(thread => {
+            const { board, reported, delete_password, ...rest } = thread;
+            return rest;
+          });
+          
+          res.json(modifiedArray);
         }
       });
   } catch (err) {
@@ -65,6 +89,7 @@ exports.deleteThread = async (req, res) => {
     }
   } catch (err) {
     res.json("error");
+    return
   }
 };
 
@@ -73,8 +98,9 @@ exports.putThread = async (req, res) => {
     let updateThread = await Message.findById(req.body.thread_id);
     updateThread.reported = true;
     await updateThread.save();
-    return res.send("success");
+    return res.send("reported");
   } catch (err) {
     res.json("error");
+    return
   }
 };
